@@ -27,10 +27,13 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 #include "string.h"
 #include "esp_at.h"
 #include "nvs.h"
 #include "nvs_flash.h"
+#include "at_uart_task.h"
+#include "projdefs.h"
 
 #include "esp_system.h"
 #include "driver/gpio.h"
@@ -51,6 +54,7 @@ static const uint8_t esp_at_uart_parity_table[] = {UART_PARITY_DISABLE, UART_PAR
 
 static QueueHandle_t esp_at_uart_queue = NULL;
 static bool at_default_flag = false;
+static bool at_disconnect_task = false;
 
 #if defined(CONFIG_TARGET_PLATFORM_ESP32)
 #define CONFIG_AT_UART_PORT_TX_PIN_DEFAULT          17
@@ -148,6 +152,23 @@ static bool at_port_wait_write_complete (int32_t timeout_msec)
     return false;
 }
 
+void at_disconnect_timeout(TimerHandle_t xtimer)
+{
+    xTimerDelete(xtimer, pdMS_TO_TICKS(500));
+    printf("CIPSEND TIMEOUT, restoring AT parsing.\r\n");
+    at_disconnect_task = false;    
+}
+
+void at_set_disconnected(bool state)
+{
+    at_disconnect_task = state;
+    if (state)
+    {
+        TimerHandle_t at_disconnect_timer_handle =  xTimerCreate("ATDISCTIMER", pdMS_TO_TICKS(5000), pdFALSE, "AT1", at_disconnect_timeout);
+        xTimerStart(at_disconnect_timer_handle, pdMS_TO_TICKS(500));
+    }
+}
+
 static void uart_task(void *pvParameters)
 {
     uart_event_t event;
@@ -177,9 +198,17 @@ retry:
                         break;
                     }
                 }
-                esp_at_port_recv_data_notify (data_len, portMAX_DELAY);
-                data_len = 0;
-
+                if (!at_disconnect_task)
+                {
+                    esp_at_port_recv_data_notify (data_len, portMAX_DELAY);
+                    data_len = 0;
+                }
+                else
+                {
+                    printf("AT disconnected, so here we would buffer out to WiFi channel.\r\n");
+                    uart_flush_input(esp_at_uart_port);
+                    xQueueReset(esp_at_uart_queue);
+                }
                 if (retry_flag == pdTRUE) {
                     goto retry;
                 }

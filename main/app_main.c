@@ -29,6 +29,8 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
+#include "interface/uart/at_uart_task.h"
+#include "projdefs.h"
 
 #ifdef CONFIG_AT_WIFI_COMMAND_SUPPORT
 #include "esp_event_loop.h"
@@ -51,6 +53,7 @@
 #ifdef CONFIG_AT_ETHERNET_SUPPORT
 #include "at_eth_init.h"
 #endif
+
 
 #ifdef CONFIG_AT_OTA_SUPPORT
 static uint8_t at_exeCmdCipupdate(uint8_t *cmd_name)//add get station ip and ap ip
@@ -102,6 +105,18 @@ static esp_at_cmd_struct at_update_cmd[] = {
     {"+CIUPDATE", NULL, NULL, at_setupCmdCipupdate, at_exeCmdCipupdate},
 };
 #endif
+
+
+static uint8_t at_queryCSend (uint8_t *cmd_name)
+{    
+    printf("Disconnecting AT handler\r\n");
+    at_set_disconnected(true);
+    return ESP_AT_RESULT_CODE_OK;
+}
+
+static esp_at_cmd_struct at_custom_cmd[] = {
+    {"+CIPSEND2", NULL, at_queryCSend, NULL, NULL},
+};
 
 #ifdef CONFIG_AT_WIFI_COMMAND_SUPPORT
 static esp_err_t at_wifi_event_handler(void *ctx, system_event_t *event)
@@ -290,8 +305,9 @@ void app_main()
     esp_at_custom_cmd_line_terminator_set((uint8_t*)&cmd_terminator);
 #endif
 
+    esp_at_custom_cmd_array_regist (at_custom_cmd, sizeof(at_custom_cmd)/sizeof(at_custom_cmd[0]));
 #ifdef CONFIG_AT_OTA_SUPPORT
-    esp_at_custom_cmd_array_regist (at_update_cmd, sizeof(at_update_cmd)/sizeof(at_update_cmd[0]));
+    //esp_at_custom_cmd_array_regist (at_update_cmd, sizeof(at_update_cmd)/sizeof(at_update_cmd[0]));
 #endif
     at_custom_init();
 }
