@@ -1,4 +1,7 @@
 # Overview
+
+**NOTE: This fork is a custom RTOS AT build for the ESP-01 on the [ZX Spectrum Next™](https://www.specnext.com/about/). See the wiki for [Next build/flashing instructions](https://github.com/spugnut/esp-at/wiki/Set-up-ESP8266-build-environment-for-ESP01-and-SDK-3.x). See [the official Expressif repository](https://github.com/espressif/esp-at) for the official esp-at code.**
+
 libat_core.a is AT Command Core, and it is the core of AT command, including the default AT instruction set, the AT command parsing, execution and responding. The lib contains 4 kinds of command, such as `AT+TEST=?`, `AT+TEST?`, `AT+TEST=“abc”` and `AT+TEST`. It supports custom AT commands based on the lib and related APIs, and ones can also define input and output medium, like uart, spi, socket, bt, etc.
 
 The demo is the AT command set based on uart. You can replace the uart driver with other drivers whichever you want to use. But maybe you have to make some changes to run the new driver. In addition, you can add some custom AT commands in `at_custom_cmd` like `AT+CIUPDATE` if necessary.
